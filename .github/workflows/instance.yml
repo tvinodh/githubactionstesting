@@ -29,7 +29,9 @@ jobs:
         id:   destory
         env:
           TF_VAR_ec2_name:  "${{ github.event.inputs.ec2-name }}"
-        run:   terraform destroy -auto-approve
+        run: |
+           terraform init
+           terraform destroy -auto-approve
 #          terraform init
 #          terraform validate
 #          terraform plan 
