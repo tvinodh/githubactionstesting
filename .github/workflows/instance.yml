@@ -25,12 +25,12 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_wrapper: false
-      - name: Terraform Apply
-        id:   apply
+      - name: Terraform destroy
+        id:   destory
         env:
           TF_VAR_ec2_name:  "${{ github.event.inputs.ec2-name }}"
-        run: |
+        run:   terraform destroy -auto-approve
 #          terraform init
 #          terraform validate
 #          terraform plan 
-          terraform destroy -auto-approve
+
