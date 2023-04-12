@@ -26,14 +26,18 @@ jobs:
         with:
           terraform_wrapper: false
       - name: Terraform apply
-        id:   destory
+        id:   apply
         env:
           TF_VAR_ec2_name:  "${{ github.event.inputs.ec2-name }}"
         run: |
            terraform init
-           terraform plan 
-           terraform destroy -auto-approve
-#          terraform init
-#          terraform validate
-#          terraform plan 
-
+           terraform plan
+      - name: Manual  Approvals
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.TOKEN }}
+          approvers: tvinodh
+          minimum-approvals: 1
+          issue-title: "Approvals fron terraform"
+          issue-body: "Please approve or deny the deployment" 
+          run: terraform apply -auto-approve 
