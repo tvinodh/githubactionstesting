@@ -25,8 +25,8 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_wrapper: false
-      - name: Terraform apply
-        id:   apply
+      - name: Terraform plan
+        id:   plan
         env:
           TF_VAR_ec2_name:  "${{ github.event.inputs.ec2-name }}"
         run: |
@@ -40,6 +40,15 @@ jobs:
           minimum-approvals: 1
           issue-title: "Approvals fron terraform"
           issue-body: "Please approve or deny the deployment" 
-          run: |
+          
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_wrapper: false
+      - name: Terraform apply
+        id:   apply
+        env:
+          TF_VAR_ec2_name:  "${{ github.event.inputs.ec2-name }}"
+        run: |          
             terraform plan 
             terraform apply -auto-approve 
