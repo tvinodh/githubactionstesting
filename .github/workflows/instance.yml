@@ -40,4 +40,6 @@ jobs:
           minimum-approvals: 1
           issue-title: "Approvals fron terraform"
           issue-body: "Please approve or deny the deployment" 
-          run: terraform apply -auto-approve 
+          run: |
+            terraform plan 
+            terraform apply -auto-approve 
