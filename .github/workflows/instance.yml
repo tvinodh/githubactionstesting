@@ -46,8 +46,8 @@ jobs:
         uses: trstringer/manual-approval@v1
         with:
           secret: ${{ github.TOKEN }}
-          approvers: mounika-krishna
-          minimum-approvals: 1
+          approvers: mounika-krishna,tvinodh
+ #         minimum-approvals: 1
           issue-title: "Approvals fron terraform"
           issue-body: "Please approve or deny the deployment" 
           
