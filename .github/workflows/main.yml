@@ -1,0 +1,86 @@
+name: Deploy to frontend
+on:
+  push:
+    branches: deploy_to_frontend
+  pull_request:
+    branches: deploy_to_frontend
+
+permissions:
+  id-token: write
+  contents: read
+jobs:
+  build:
+    strategy:
+      matrix:
+        repos: [ cloudbank-api ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    environment: DEV
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.ACCESS_KEY }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.ACCESS_SECRET }}
+      AWS_DEFAULT_REGION: 'ap-southeast-1'
+      AWS_DEFAULT_OUTPUT: json
+    steps:
+      - name: Install Node.js 16
+        run: |
+             curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.38.0/install.sh | bash
+             export NVM_DIR="$HOME/.nvm"
+             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+             nvm install 16
+      - name: Set up Node.js 16
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16
+          
+      - name: Check Node.js version
+        run: node --version
+
+      - name: Check npm version
+        run: npm --version
+
+      - uses: actions/checkout@v3
+      - name: Clone Repo
+        run: |
+          echo $AWS_ACCESS_KEY_ID
+          pip install git-remote-codecommit
+          git clone codecommit://${{matrix.repos}}
+          ls -la
+          ls -la ${{matrix.repos}}
+          cd ${{matrix.repos}}
+          pwd
+      - name: Run Build
+        id: build
+        run: |
+          source ~/.nvm/nvm.sh
+          npm i
+          npm i --global gulp-cli
+          gulp clean
+          cp .env .env.prod
+          gulp build
+          gulp package
+          ls -al
+        
+        working-directory: ./${{matrix.repos}}
+      - name: Get Commit Short SHA
+        id: commit_sha
+        run: echo "::set-output name=sha::$(git rev-parse --short ${GIT_COMMIT})"
+      
+      - name: Deploying app to s3
+        id: deploy
+    
+       
+        uses: dvelasquez/deploy-s3-action@main
+        with:
+          AWS_ACCESS_KEY_ID: ${{ secrets.ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.ACCESS_SECRET }}
+          AWS_DEFAULT_REGION: ap-southeast-1
+          AWS_BUCKET_NAME: cloud-bank-frontend
+          BUCKET_PATH: s3://cloud-bank-frontend/
+          DIST_LOCATION_CODE: ./dist
+          working-directory: ./${{matrix.repos}} 
+
+        env:
+          DEBUG: true 
