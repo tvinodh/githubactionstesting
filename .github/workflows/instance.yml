@@ -1,58 +1,76 @@
-name: Provision t2.micro EC2
+name: Build and Deploy
+
 on:
-  workflow_dispatch:
-    inputs:
-      ec2-name:
-        description: EC2 name
-        required: true
-        default: 'App Server'
-        type: string
-      destroy:
-        description: Destroy Environment
-        type: boolean
-        required: false        
+  push:
+    branches:
+      - main
+
 jobs:
-  provision-ec2:
+  build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '14'
-      - name: Configure AWS credentials
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up AWS CLI
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: '${{ secrets.TF_USER_AWS_KEY }}'
-          aws-secret-access-key: '${{ secrets.TF_USER_AWS_SECRET }}'
-          aws-region: us-east-1
-      - uses: actions/checkout@v3
-      - name: Destroy Environment
-        if: inputs.destroy == true          
-        env:
-          TF_VAR_ec2_name:  "${{ github.event.inputs.ec2-name }}"
+          AWS_ACCESS_KEY_ID: ${{ secrets.TF_USER_AWS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_USER_AWS_SECRET }}
+          AWS_DEFAULT_REGION: 'ap-southeast-1'
+          AWS_DEFAULT_OUTPUT: json
+
+      - name: Download lastBuild_frontend from S3
         run: |
-           terraform init
-           terraform destroy -auto-approve
-           
-      - name: Run Terraform
-        if: inputs.destroy == false
-        env:
-          TF_VAR_ec2_name:  "${{ github.event.inputs.ec2-name }}"        
+          aws s3 cp s3://cloudbank-build-artifacts/frontend-build-artifacts/lastBuild_frontend lastBuild_frontend
+          export BUILD_VERSION=$(cat lastBuild_frontend)
+
+      - name: Print build version
+        run: echo $BUILD_VERSION
+
+      - name: Create directory for frontend build
+        run: mkdir -p /var/lib/jenkins/frontend-build-prod/
+
+      - name: Copy build artifact from S3
+        run: aws s3 cp s3://cloudbank-build-artifacts/frontend-build-artifacts/${BUILD_VERSION}.zip /var/lib/jenkins/frontend-build-prod/
+
+      - name: Extract and prepare build artifact
         run: |
-          terraform --version
-          terraform init --upgrade
-          terraform plan
-      - name: Manual  Approvals
-        uses: trstringer/manual-approval@v1
-        with:
-          secret: ${{ github.TOKEN }}
-          approvers: tvinodh
- #         minimum-approvals: 1
-          issue-title: "Approvals fron terraform"
-          issue-body: "Please approve or deny the deployment" 
-          
-      - name: Terraform apply
-        env:
-          TF_VAR_ec2_name:  "${{ github.event.inputs.ec2-name }}"
-        run: |          
-            terraform apply --auto-approve      
+          cd /tmp/
+          mkdir -p frontend-build-prod
+          cd frontend-build-prod
+          rm -rf *
+          cp /var/lib/jenkins/frontend-build-prod/${BUILD_VERSION}.zip .
+          unzip ${BUILD_VERSION}.zip
+          rm ${BUILD_VERSION}.zip
+          cd dist/cloudbank-admin-ui/
+
+      - name: Download customer environment file
+        run: aws s3 cp s3://cloudbank-frontend-env/${CUSTOMER_NAME}/${CUSTOMER_NAME}.env ${CUSTOMER_NAME}.env
+
+      - name: Update CLI URL in main.*.js
+        if: ${{ env.COGNITO == 'no' }}
+        run: |
+          CLI_URL=$(sed -n '1p' ${CUSTOMER_NAME}.env)
+          sed -i "s,atimonan,${CLI_URL},g" main.*.js
+          #sed -i "s,api-test.dev.opsycon,${CLI_URL},g" main.*.js
+
+      - name: Adjust URL for rang-ay-staging
+        if: ${{ env.CUSTOMER_NAME == 'rang-ay-staging' }}
+        run: |
+          echo "Adjusting the URL"
+          API_STRING='api-staging'
+          sed -i "s,api-test,${API_STRING},g" main.*.js
+
+      - name: Remove customer environment file
+        run: rm -rf ${CUSTOMER_NAME}.env
+
+      - name: Sync files to S3 bucket
+        run: aws s3 sync . s3://${BKT_NAME} --acl public-read --profile ${PROFILE}
+
+      - name: Copy index.html to S3 bucket
+        run: aws s3 cp index.html s3://${BKT_NAME} --acl public-read --profile ${PROFILE}
+
+      - name: Create CloudFront invalidation
+        run: aws cloudfront create-invalidation --distribution-id ${CLOUDFRONT_ID} --profile ${PROFILE} --paths "/*"
