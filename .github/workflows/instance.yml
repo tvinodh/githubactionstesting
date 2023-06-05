@@ -16,10 +16,11 @@ jobs:
       - name: Set up AWS CLI
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          AWS_ACCESS_KEY_ID: ${{ secrets.TF_USER_AWS_KEY }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.TF_USER_AWS_SECRET }}
-          AWS_DEFAULT_REGION: 'us-east-1'
+          AWS_ACCESS_KEY_ID: ${{ secrets.ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.ACCESS_SECRET }}
+          AWS_DEFAULT_REGION: 'ap-southeast-1'
           AWS_DEFAULT_OUTPUT: json
+          
 
       - name: Download lastBuild_frontend from S3
         run: |
