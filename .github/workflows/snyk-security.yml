@@ -1,6 +1,9 @@
 name: Snyk Security Scan
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
     branches:
       - main  # Adjust to match your default branch
