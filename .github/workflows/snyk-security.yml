@@ -9,20 +9,25 @@ on:
       - main  # Adjust to match your default branch
 
 jobs:
-  snyk-scan:
+  security:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Install Snyk CLI
-        run: |
-          curl -o snyk https://static.snyk.io/cli/latest/snyk-linux
-          chmod +x snyk
-          snyk test --all-projects --all-sub-projects --all-branches --all-commits --file=path/to/package.json
-          mv snyk /usr/local/bin/
-          snyk test --all-projects
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14
 
-        env:
-          SNYK_TOKEN: ${{ secrets.SNYK_API_TOKEN }}
+      - name: Install Snyk CLI
+        run: npm install -g snyk
+
+      - name: Authenticate Snyk
+        run: snyk auth $SNYK_TOKEN
+
+      - name: Run Snyk to check for vulnerabilities
+        run: snyk test --all-projects --all-projects
+
+env:
+  SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
