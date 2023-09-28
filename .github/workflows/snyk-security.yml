@@ -21,13 +21,11 @@ jobs:
           node-version: 14
 
       - name: Install Snyk CLI
-        run: npm install -g snyk
-
-      - name: Authenticate Snyk
-        run: snyk auth $SNYK_TOKEN
-
-      - name: Run Snyk to check for vulnerabilities
-        run: snyk test --all-projects --all-projects
+        run: |
+           echo "Current Working Directory: $GITHUB_WORKSPACE"
+           npm install -g snyk
+           snyk auth $SNYK_TOKEN
+           snyk test --all-projects --all-projects
 
 env:
   SNYK_TOKEN: ${{ secrets.SNYK_API_TOKEN }}
