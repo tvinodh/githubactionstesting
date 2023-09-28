@@ -18,7 +18,9 @@ jobs:
         with:
           node-version: 14
       - name: Snyk monitor
-        run: snyk test
+        run: |
+           snyk auth $SNYK_TOKEN
+           snyk test
         env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+          SNYK_TOKEN: ${{ secrets.SNYK_API_TOKEN }}
      
