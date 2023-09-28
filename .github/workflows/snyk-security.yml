@@ -4,19 +4,30 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main  # Adjust to match your default branch
 
 jobs:
   security:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v2
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14
 
-      - name: Run Snyk to check for vulnerabilities
-        run: |
-          npm install -g snyk
-          snyk auth
-          snyk test
+      - name: Set Snyk API token
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_API_TOKEN }}
+        run: echo "SNYK_TOKEN=$SNYK_TOKEN" >> $GITHUB_ENV
+
+      - name: Install Snyk CLI
+        run: npm install -g snyk
+
+      - name: Run Snyk to check for vulnerabilities
+        run: snyk test --all-projects --all-projects
