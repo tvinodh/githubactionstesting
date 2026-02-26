@@ -22,3 +22,4 @@ jobs:
       run: |
          npm install
          npx snyk test
+
