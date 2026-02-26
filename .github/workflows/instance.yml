@@ -70,6 +70,7 @@ jobs:
       - name: Sync files to S3 bucket
         run: aws s3 sync . s3://${BKT_NAME} --acl public-read --profile ${PROFILE}
 
+
       - name: Copy index.html to S3 bucket
         run: aws s3 cp index.html s3://${BKT_NAME} --acl public-read --profile ${PROFILE}
 
